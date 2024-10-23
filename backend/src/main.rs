@@ -1,6 +1,9 @@
 mod postgres;
 use axum::{
-    http::{header::CONTENT_TYPE, HeaderValue, Method},
+    http::{
+        header::{AUTHORIZATION, CONTENT_TYPE},
+        HeaderValue, Method,
+    },
     routing, Json, Router,
 };
 use sqlx::postgres::PgPoolOptions;
@@ -9,9 +12,10 @@ use std::net::SocketAddr;
 use crate::postgres::{rest_router, AppState};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>>{
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
 
+    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT secret must be set");
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = PgPoolOptions::new().connect(&db_url).await?;
 
@@ -21,10 +25,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .layer(
             tower_http::cors::CorsLayer::new()
                 .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
-                .allow_headers([CONTENT_TYPE])
+                .allow_headers([CONTENT_TYPE, AUTHORIZATION])
                 .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE]),
         )
-        .with_state(AppState::new(pool));
+        .with_state(AppState::new(pool, &jwt_secret));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     println!("Server started, listening on {addr}");

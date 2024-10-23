@@ -1,4 +1,6 @@
 mod app_state;
+mod auth;
+mod jwt;
 mod routes;
 mod store;
 
